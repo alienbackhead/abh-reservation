@@ -151,10 +151,45 @@
 
   footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--mute); font-size: .85rem; }
   footer p { margin: 0 0 6px; }
+
+  /* ---------- 画像（CONFIG.HERO_IMAGE / BG_IMAGE を設定したときだけ有効） ---------- */
+  body.has-bg::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: linear-gradient(rgba(0,0,0,.80), rgba(0,0,0,.90)), var(--bg-image) center / cover no-repeat;
+  }
+  .hero.has-image {
+    position: relative; isolation: isolate;
+    width: 100vw; margin-left: calc(50% - 50vw);
+    margin-top: -40px;
+    padding: 0 max(20px, calc(50vw - 300px)) 36px;
+    min-height: min(78svh, 640px);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    border-bottom: 0;
+  }
+  .hero.has-image::before {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.65) 100%), var(--hero-image) center / cover no-repeat;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  }
+  .hero.has-image h1 { text-shadow: 0 2px 24px rgba(0,0,0,.65); }
+  .hero.has-image .sub { color: #b9b6ac; }
+
+  /* ---------- ロゴ画像 / バナー ---------- */
+  .hero h1.is-logo { line-height: 0; }
+  .hero h1 .logo { display: block; width: min(78vw, 340px); height: auto; }
+  .banner {
+    width: 100%; aspect-ratio: 3 / 2; max-height: min(62svh, 560px);
+    background: linear-gradient(rgba(0,0,0,.22), rgba(0,0,0,.22)), var(--hero-image) center 30% / cover no-repeat;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  }
+  body.has-banner .wrap { position: relative; margin-top: -40px; padding-top: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
+<div id="banner" class="banner" role="img" aria-label="ALIEN BACK HEAD" hidden></div>
 <div class="wrap">
 
   <header class="hero">
@@ -238,6 +273,10 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbw6mNESZKKSjzaQK1bcNfa_Q_Q4xnbzo1RFsUEHy29PDST_Qyrd4jcJR__hK0oow-81/exec",   // Apps Script をウェブアプリとして公開したときの URL（…/exec）
   MAX_TICKETS: 99, // 1回の予約で選べる最大枚数（Code.gs の MAX_TICKETS と合わせる）
   CONTACT_TEXT: "キャンセル・変更は、ALIEN BACK HEAD公式XアカウントのDMまでご連絡ください。"
+  LOGO_IMAGE: "logo.png",  // タイトルの文字の代わりに出すロゴ画像。例: "logo.png"。空なら文字のタイトル
+  HERO_IMAGE: "",  // ページ上部の大きな画像。例: "banner.jpg"（index.html と同じ場所に置く）。空なら出さない
+  HERO_MODE: "banner", // "banner" = 画像を上に置いて、下をにじませる / "cover" = 画像の上にタイトルを重ねる
+  BG_IMAGE: "bg.jpg"     // ページ全体の背景画像。例: "bg.jpg"。空なら黒一色
 };
 /* ============================================== */
 
@@ -462,6 +501,32 @@ function resetForm() {
   $("#reserve").scrollIntoView({ block: "start" });
 }
 
+
+function cssUrl(path) { return 'url("' + String(path).replace(/"/g, "%22") + '")'; }
+function applyImages() {
+  if (CONFIG.LOGO_IMAGE) {
+    const h1 = document.querySelector(".hero h1");
+    const img = el("img", { class: "logo", src: CONFIG.LOGO_IMAGE, alt: "ALIEN BACK HEAD" });
+    h1.replaceChildren(img);
+    h1.classList.add("is-logo");
+    h1.removeAttribute("aria-label");
+  }
+  if (CONFIG.HERO_IMAGE) {
+    document.documentElement.style.setProperty("--hero-image", cssUrl(CONFIG.HERO_IMAGE));
+    if (CONFIG.HERO_MODE === "cover") {
+      document.querySelector(".hero").classList.add("has-image");
+    } else {
+      $("#banner").hidden = false;
+      document.body.classList.add("has-banner");
+    }
+  }
+  if (CONFIG.BG_IMAGE) {
+    document.documentElement.style.setProperty("--bg-image", cssUrl(CONFIG.BG_IMAGE));
+    document.body.classList.add("has-bg");
+  }
+}
+
+applyImages();
 $("#contactText").textContent = CONFIG.CONTACT_TEXT;
 $("#doneContact").textContent = CONFIG.CONTACT_TEXT;
 $("#form").addEventListener("submit", submitForm);
