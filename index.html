@@ -16,7 +16,7 @@
     --panel-2: #171717;
     --line: #2b2b2b;
     --gold: #c9a96a;
-    --gold-dim: #8a7547;
+    --gold-dim: #9a8250;
     --bone: #efece4;
     --mute: #928f86;
     --red: #e5806b;
@@ -63,7 +63,7 @@
     display: grid;
     grid-template-columns: 92px 1fr;
     background: var(--panel);
-    border: 1px solid var(--line);
+    border: 1px solid var(--gold-dim);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -71,17 +71,17 @@
   .ticket .stub {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 16px 6px;
-    border-right: 2px dashed var(--line);
+    border-right: 2px dashed var(--gold-dim);
     text-align: center;
   }
-  .ticket.is-selected .stub { border-right-color: var(--gold-dim); }
-  .stub .mon { font-size: .8rem; color: var(--mute); }
-  .stub .day { font-family: var(--display); font-size: 3rem; line-height: 1; color: var(--gold); }
-  .stub .wd { font-size: .8rem; color: var(--mute); }
+  .ticket.is-selected .stub { border-right-color: var(--gold); }
+  .stub .mon { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
+  .stub .day { font-family: var(--display); font-size: 2.6rem; line-height: 1.05; color: var(--gold); }
+  .stub .wd { font-size: .95rem; font-weight: 500; line-height: 1.2; color: var(--bone); }
   /* ticket notches on the perforation */
   .ticket::before, .ticket::after {
     content: ""; position: absolute; left: 92px; width: 16px; height: 16px;
-    background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--gold-dim); border-radius: 50%;
     transform: translateX(-50%);
   }
   .ticket::before { top: -9px; }
@@ -97,7 +97,7 @@
   .left.low { color: var(--gold); }
   .left.none { color: var(--red); }
 
-  .state { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 4px; color: var(--mute); text-align: center; }
+  .state { padding: 28px 20px; border: 1px dashed var(--gold-dim); border-radius: 4px; color: var(--mute); text-align: center; }
   .state p { margin: 0 0 12px; }
   .state p:last-child { margin: 0; }
 
@@ -125,7 +125,7 @@
   .field .hint { margin: 6px 0 0; font-size: .85rem; color: var(--mute); }
   input[type=text], select, textarea {
     width: 100%; font: inherit; color: var(--bone);
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
+    background: var(--panel-2); border: 1px solid var(--gold-dim); border-radius: 3px;
     padding: 12px 14px; min-height: 48px;
   }
   textarea { min-height: 96px; resize: vertical; }
@@ -332,13 +332,6 @@ function showState(message, withRetry) {
   box.append(state);
 }
 
-function leftLabel(ev) {
-  if (ev.remaining == null) return null;
-  if (ev.remaining <= 0) return { text: "満席", cls: "none" };
-  if (ev.remaining <= 5) return { text: "残り" + ev.remaining + "枚", cls: "low" };
-  return { text: "残り" + ev.remaining + "枚", cls: "" };
-}
-
 function renderEvents() {
   const box = $("#events");
   box.replaceChildren();
@@ -349,8 +342,7 @@ function renderEvents() {
   const selected = $("#eventId").value;
   for (const ev of events) {
     const dt = parseDate(ev.date);
-    const left = leftLabel(ev);
-    const full = left && left.cls === "none";
+    const full = ev.remaining != null && ev.remaining <= 0; // 満席のときは、ボタンを押せなくする（残り枚数は表示しない）
     const dl = el("dl");
     const add = (k, v) => { if (v) { dl.append(el("dt", { text: k }), el("dd", { text: v })); } };
     add("会場", ev.venue);
@@ -366,8 +358,7 @@ function renderEvents() {
           class: "btn small", type: "button", text: full ? "満席です" : "このライブを予約する",
           ...(full ? { disabled: "" } : {}),
           onclick: () => chooseEvent(ev.id)
-        }),
-        left ? el("span", { class: "left " + left.cls, text: left.text }) : null
+        })
       )
     );
     const ticket = el("article", { class: "ticket" + (selected === ev.id ? " is-selected" : "") },
