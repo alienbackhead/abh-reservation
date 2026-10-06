@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ALIEN BACK HEAD 取り置き予約</title>
+<meta name="description" content="ALIEN BACK HEAD のライブの取り置き予約。お支払いは当日、会場で。">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Pirata+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0f0f0f;
+    --panel-2: #171717;
+    --line: #2b2b2b;
+    --gold: #c9a96a;
+    --gold-dim: #8a7547;
+    --bone: #efece4;
+    --mute: #928f86;
+    --red: #e5806b;
+    --lime: #e8ec6a;
+    --display: "Pirata One", "Noto Sans JP", serif;
+    --body: "Noto Sans JP", system-ui, -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--bone);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.7;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px 72px; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 8px 0 36px; border-bottom: 1px solid var(--line); }
+  .hero h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(64px, 21vw, 124px);
+    line-height: .86;
+    letter-spacing: .01em;
+  }
+  .hero h1 span { display: block; }
+  .hero h1 span:nth-child(2) { padding-left: .55em; color: var(--gold); }
+  .hero .lead { margin: 28px 0 0; font-size: 1.25rem; font-weight: 700; }
+  .hero .sub { margin: 6px 0 0; color: var(--mute); font-size: .95rem; }
+
+  h2 { font-size: 1.1rem; margin: 0 0 16px; font-weight: 700; }
+  section { padding-top: 40px; }
+
+  /* ---------- tickets ---------- */
+  .tickets { display: grid; gap: 14px; }
+  .ticket {
+    position: relative;
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .ticket.is-selected { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-dim); }
+  .ticket .stub {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px 6px;
+    border-right: 2px dashed var(--line);
+    text-align: center;
+  }
+  .ticket.is-selected .stub { border-right-color: var(--gold-dim); }
+  .stub .mon { font-size: .8rem; color: var(--mute); }
+  .stub .day { font-family: var(--display); font-size: 3rem; line-height: 1; color: var(--gold); }
+  .stub .wd { font-size: .8rem; color: var(--mute); }
+  /* ticket notches on the perforation */
+  .ticket::before, .ticket::after {
+    content: ""; position: absolute; left: 92px; width: 16px; height: 16px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
+    transform: translateX(-50%);
+  }
+  .ticket::before { top: -9px; }
+  .ticket::after { bottom: -9px; }
+  .ticket .body { padding: 16px 16px 16px 18px; min-width: 0; }
+  .ticket h3 { margin: 0; font-size: 1.05rem; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; }
+  .ticket dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .9rem; }
+  .ticket dt { color: var(--mute); }
+  .ticket dd { margin: 0; overflow-wrap: anywhere; }
+  .ticket .note { margin: 8px 0 0; font-size: .85rem; color: var(--mute); }
+  .ticket .row { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .left { font-size: .85rem; color: var(--mute); }
+  .left.low { color: var(--gold); }
+  .left.none { color: var(--red); }
+
+  .state { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 4px; color: var(--mute); text-align: center; }
+  .state p { margin: 0 0 12px; }
+  .state p:last-child { margin: 0; }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    appearance: none; cursor: pointer;
+    font: inherit; font-weight: 700;
+    min-height: 48px; padding: 0 22px;
+    border-radius: 3px; border: 1px solid var(--gold);
+    background: transparent; color: var(--gold);
+  }
+  .btn:hover { background: rgba(201,169,106,.12); }
+  .btn.primary { background: var(--gold); color: #000; }
+  .btn.primary:hover { background: #d8bb7f; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.small { min-height: 40px; padding: 0 16px; font-size: .9rem; }
+  .btn.block { width: 100%; }
+
+  :focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+  /* ---------- form ---------- */
+  form { display: grid; gap: 22px; }
+  .field label, .field .label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .field .opt { font-weight: 400; color: var(--mute); font-size: .85rem; margin-left: 6px; }
+  .field .hint { margin: 6px 0 0; font-size: .85rem; color: var(--mute); }
+  input[type=text], select, textarea {
+    width: 100%; font: inherit; color: var(--bone);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
+    padding: 12px 14px; min-height: 48px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201,169,106,.35); }
+  select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--gold) 50%), linear-gradient(135deg, var(--gold) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 40px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .error { margin: 0; padding: 12px 14px; border: 1px solid var(--red); color: var(--red); border-radius: 3px; font-size: .95rem; }
+  .error[hidden] { display: none; }
+  .fine { margin: 0; font-size: .85rem; color: var(--mute); }
+  form .fine + .fine { margin-top: -10px; }
+  .done .fine { margin: 0 0 8px; }
+
+  /* ---------- done ---------- */
+  .done { border: 1px solid var(--gold); border-radius: 4px; background: var(--panel); padding: 28px 22px; }
+  .done h2 { font-size: 1.35rem; margin-bottom: 4px; }
+  .done .code { font-family: var(--display); font-size: 3.2rem; line-height: 1.1; color: var(--lime); margin: 14px 0 4px; letter-spacing: .04em; }
+  .done .label { color: var(--mute); font-size: .85rem; }
+  .done dl { margin: 18px 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+  .done dt { color: var(--mute); }
+  .done dd { margin: 0; overflow-wrap: anywhere; }
+  .done .stamp { animation: stamp .35s cubic-bezier(.2,.9,.3,1.2) both; }
+  @keyframes stamp { from { opacity: 0; transform: scale(1.35) rotate(-4deg); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .done .stamp { animation: none; } }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--mute); font-size: .85rem; }
+  footer p { margin: 0 0 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1 aria-label="ALIEN BACK HEAD"><span>ALIEN</span><span>BACK</span><span>HEAD</span></h1>
+    <p class="lead">ライブの取り置き予約</p>
+    <p class="sub">予約にお金はかかりません。お支払いは当日、会場で。</p>
+  </header>
+
+  <section aria-labelledby="events-h">
+    <h2 id="events-h">予約できるライブ</h2>
+    <div id="events" class="tickets" aria-live="polite"></div>
+  </section>
+
+  <section id="reserve" aria-labelledby="form-h">
+    <div id="formArea">
+      <h2 id="form-h">予約する</h2>
+      <form id="form" novalidate>
+        <div class="field">
+          <label for="eventId">ライブ</label>
+          <select id="eventId" name="eventId" required>
+            <option value="">ライブを選んでください</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="name">お名前</label>
+          <input id="name" name="name" type="text" maxlength="40" autocomplete="name" required>
+          <p class="hint">受付で呼ぶ名前です。ニックネームでも大丈夫です。</p>
+        </div>
+
+        <div class="field">
+          <label for="qty">枚数</label>
+          <select id="qty" name="qty" required></select>
+        </div>
+
+        <div class="field">
+          <label for="note">備考<span class="opt">任意</span></label>
+          <textarea id="note" name="note" maxlength="200"></textarea>
+        </div>
+
+        <div class="hp" aria-hidden="true">
+          <label>この欄は空のままにしてください<input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></label>
+        </div>
+
+        <p id="error" class="error" role="alert" hidden></p>
+
+        <button id="submit" class="btn primary block" type="submit">取り置きを確定する</button>
+
+        <p class="fine">お支払いは当日、会場の受付でお願いします。</p>
+        <p class="fine" id="contactText"></p>
+      </form>
+    </div>
+
+    <div id="done" class="done" hidden aria-live="polite">
+      <h2>取り置きを確定しました</h2>
+      <div class="stamp">
+        <div class="label">予約番号</div>
+        <div class="code" id="doneCode"></div>
+      </div>
+      <dl>
+        <dt>ライブ</dt><dd id="doneEvent"></dd>
+        <dt>日時</dt><dd id="doneWhen"></dd>
+        <dt>会場</dt><dd id="doneVenue"></dd>
+        <dt>お名前</dt><dd id="doneName"></dd>
+        <dt>枚数</dt><dd id="doneQty"></dd>
+      </dl>
+      <p class="fine">この画面のスクリーンショットを保存しておくと安心です。当日は、会場の受付でお名前をお伝えください。</p>
+      <p class="fine" id="doneContact"></p>
+      <p style="margin:20px 0 0"><button id="again" class="btn block" type="button">別の予約をする</button></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>いただいた名前と枚数は、取り置きの受付のためだけに使います。ライブ終了後に削除します。</p>
+  </footer>
+</div>
+
+<script>
+/* ===== 設定（ここだけ書き換えてください） ===== */
+const CONFIG = {
+  API_URL: "https://script.google.com/macros/s/AKfycbw6mNESZKKSjzaQK1bcNfa_Q_Q4xnbzo1RFsUEHy29PDST_Qyrd4jcJR__hK0oow-81/exec",   // Apps Script をウェブアプリとして公開したときの URL（…/exec）
+  MAX_TICKETS: 99, // 1回の予約で選べる最大枚数（Code.gs の MAX_TICKETS と合わせる）
+  CONTACT_TEXT: "キャンセル・変更は、ALIEN BACK HEAD公式XアカウントのDMまでご連絡ください。"
+};
+/* ============================================== */
+
+const $ = (s) => document.querySelector(s);
+const WEEK = "日月火水木金土";
+let events = [];
+let shownAt = Date.now();
+
+function parseDate(iso) {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return { m, d, w: WEEK[dt.getDay()], y };
+}
+
+function el(tag, props, ...children) {
+  const node = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) node.append(c);
+  return node;
+}
+
+function showState(message, withRetry) {
+  const box = $("#events");
+  box.replaceChildren();
+  const state = el("div", { class: "state" }, el("p", { text: message }));
+  if (withRetry) state.append(el("p", null, el("button", { class: "btn small", type: "button", text: "もう一度読み込む", onclick: loadEvents })));
+  box.append(state);
+}
+
+function leftLabel(ev) {
+  if (ev.remaining == null) return null;
+  if (ev.remaining <= 0) return { text: "満席", cls: "none" };
+  if (ev.remaining <= 5) return { text: "残り" + ev.remaining + "枚", cls: "low" };
+  return { text: "残り" + ev.remaining + "枚", cls: "" };
+}
+
+function renderEvents() {
+  const box = $("#events");
+  box.replaceChildren();
+  if (!events.length) {
+    showState("いま予約できるライブはありません。次の予定が決まったらXでお知らせします。");
+    return;
+  }
+  const selected = $("#eventId").value;
+  for (const ev of events) {
+    const dt = parseDate(ev.date);
+    const left = leftLabel(ev);
+    const full = left && left.cls === "none";
+    const dl = el("dl");
+    const add = (k, v) => { if (v) { dl.append(el("dt", { text: k }), el("dd", { text: v })); } };
+    add("会場", ev.venue);
+    add("時間", ev.time);
+    add("料金", ev.price);
+    add("締切", ev.deadline);
+    const body = el("div", { class: "body" },
+      el("h3", { text: ev.title }),
+      dl,
+      ev.note ? el("p", { class: "note", text: ev.note }) : null,
+      el("div", { class: "row" },
+        el("button", {
+          class: "btn small", type: "button", text: full ? "満席です" : "このライブを予約する",
+          ...(full ? { disabled: "" } : {}),
+          onclick: () => chooseEvent(ev.id)
+        }),
+        left ? el("span", { class: "left " + left.cls, text: left.text }) : null
+      )
+    );
+    const ticket = el("article", { class: "ticket" + (selected === ev.id ? " is-selected" : "") },
+      el("div", { class: "stub" },
+        el("span", { class: "mon", text: dt.m + "月" }),
+        el("span", { class: "day", text: String(dt.d) }),
+        el("span", { class: "wd", text: dt.w + "曜" })
+      ),
+      body
+    );
+    ticket.dataset.id = ev.id;
+    box.append(ticket);
+  }
+}
+
+function fillSelect() {
+  const sel = $("#eventId");
+  const keep = sel.value;
+  sel.replaceChildren(el("option", { value: "", text: "ライブを選んでください" }));
+  for (const ev of events) {
+    const dt = parseDate(ev.date);
+    const full = ev.remaining != null && ev.remaining <= 0;
+    sel.append(el("option", { value: ev.id, text: dt.m + "/" + dt.d + "(" + dt.w + ") " + ev.title + (full ? "（満席）" : ""), ...(full ? { disabled: "" } : {}) }));
+  }
+  if (events.some((e) => e.id === keep)) sel.value = keep;
+  else if (events.length === 1 && !(events[0].remaining != null && events[0].remaining <= 0)) sel.value = events[0].id;
+  fillQty();
+}
+
+function fillQty() {
+  const ev = events.find((e) => e.id === $("#eventId").value);
+  let max = CONFIG.MAX_TICKETS;
+  if (ev && ev.remaining != null) max = Math.max(1, Math.min(max, ev.remaining));
+  const qty = $("#qty");
+  const keep = Number(qty.value) || 1;
+  qty.replaceChildren();
+  for (let i = 1; i <= max; i++) qty.append(el("option", { value: String(i), text: i + "枚" }));
+  qty.value = String(Math.min(keep, max));
+}
+
+function highlight() {
+  const id = $("#eventId").value;
+  document.querySelectorAll(".ticket").forEach((t) => t.classList.toggle("is-selected", t.dataset.id === id));
+}
+
+function chooseEvent(id) {
+  $("#eventId").value = id;
+  fillQty();
+  highlight();
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("#reserve").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  setTimeout(() => $("#name").focus({ preventScroll: true }), reduce ? 0 : 350);
+}
+
+async function loadEvents() {
+  if (!CONFIG.API_URL) {
+    showState("API_URL が未設定です。index.html の CONFIG を確認してください。");
+    return;
+  }
+  showState("読み込み中です…");
+  try {
+    const res = await fetch(CONFIG.API_URL + "?action=events", { cache: "no-store" });
+    const data = await res.json();
+    if (!data.ok) throw new Error("api");
+    events = data.events || [];
+    shownAt = Date.now();
+    fillSelect();
+    renderEvents();
+    highlight();
+  } catch (e) {
+    showState("ライブの一覧を読み込めませんでした。電波のよいところで、もう一度お試しください。", true);
+  }
+}
+
+function showError(msg) {
+  const box = $("#error");
+  box.textContent = msg;
+  box.hidden = !msg;
+  if (msg) box.scrollIntoView({ block: "nearest" });
+}
+
+const ERRORS = {
+  closed: "このライブの受付は終了しました。",
+  notfound: "このライブは見つかりませんでした。ページを読み込み直してください。",
+  invalid: "入力内容を確認してください。",
+  toofast: "もう一度、確定ボタンを押してください。"
+};
+
+async function submitForm(ev) {
+  ev.preventDefault();
+  showError("");
+  const eventId = $("#eventId").value;
+  const name = $("#name").value.trim();
+  const qty = Number($("#qty").value);
+  if (!eventId) return showError("ライブを選んでください。");
+  if (!name) return showError("お名前を入力してください。");
+  if (!(qty >= 1)) return showError("枚数を選んでください。");
+
+  const btn = $("#submit");
+  btn.disabled = true;
+  btn.textContent = "送信しています…";
+  try {
+    const res = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        eventId, name, qty,
+        note: $("#note").value.trim(),
+        hp: $("#website").value,
+        elapsed: Date.now() - shownAt
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      let msg = ERRORS[data.error];
+      if (data.error === "soldout") {
+        msg = data.remaining > 0 ? "残り" + data.remaining + "枚です。枚数を減らして、もう一度お試しください。" : "このライブは満席になりました。";
+        loadEvents();
+      }
+      throw new Error(msg || "送信できませんでした。時間をおいて、もう一度お試しください。");
+    }
+    showDone(data);
+    loadEvents();
+  } catch (e) {
+    showError(e && e.message && e.message !== "Failed to fetch" ? e.message : "送信できませんでした。電波のよいところで、もう一度お試しください。");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "取り置きを確定する";
+  }
+}
+
+function showDone(d) {
+  const dt = parseDate(d.event.date);
+  $("#doneCode").textContent = d.id;
+  $("#doneEvent").textContent = d.event.title;
+  $("#doneWhen").textContent = dt.y + "年" + dt.m + "月" + dt.d + "日(" + dt.w + ")" + (d.event.time ? " " + d.event.time : "");
+  $("#doneVenue").textContent = d.event.venue || "";
+  $("#doneName").textContent = d.name;
+  $("#doneQty").textContent = d.qty + "枚";
+  $("#formArea").hidden = true;
+  $("#done").hidden = false;
+  $("#done").scrollIntoView({ block: "start" });
+}
+
+function resetForm() {
+  $("#note").value = "";
+  $("#done").hidden = true;
+  $("#formArea").hidden = false;
+  shownAt = Date.now();
+  fillSelect();
+  highlight();
+  $("#reserve").scrollIntoView({ block: "start" });
+}
+
+$("#contactText").textContent = CONFIG.CONTACT_TEXT;
+$("#doneContact").textContent = CONFIG.CONTACT_TEXT;
+$("#form").addEventListener("submit", submitForm);
+$("#eventId").addEventListener("change", () => { fillQty(); highlight(); });
+$("#again").addEventListener("click", resetForm);
+loadEvents();
+</script>
+</body>
+</html>
