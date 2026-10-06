@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Pirata+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Pirata+One&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #000;
@@ -22,6 +22,7 @@
     --red: #e5806b;
     --lime: #e8ec6a;
     --display: "Pirata One", "Noto Sans JP", serif;
+    --title: "Tinos", "Times New Roman", Times, serif;
     --body: "Noto Sans JP", system-ui, -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
   }
   * { box-sizing: border-box; }
@@ -41,7 +42,7 @@
   .hero { padding: 8px 0 36px; border-bottom: 1px solid var(--line); }
   .hero h1 {
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--title);
     font-weight: 400;
     font-size: clamp(64px, 21vw, 124px);
     line-height: .86;
@@ -178,18 +179,38 @@
   /* ---------- ロゴ画像 / バナー ---------- */
   .hero h1.is-logo { line-height: 0; }
   .hero h1 .logo { display: block; width: min(78vw, 340px); height: auto; }
+  :root { --bh-full: min(66.67vw, 62svh, 560px); --bh-compact: clamp(84px, 24vw, 128px); }
+  html.has-banner { scroll-padding-top: calc(var(--bh-compact) + 12px); }
+  /* バナーは画面の上に固定。スクロールすると、細い帯に縮んで残る */
   .banner {
-    width: 100%; aspect-ratio: 3 / 2; max-height: min(62svh, 560px);
+    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    height: var(--bh-full);
     background: linear-gradient(rgba(0,0,0,.22), rgba(0,0,0,.22)), var(--hero-image) center 30% / cover no-repeat;
     -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
             mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+    transition: height .3s ease;
   }
-  body.has-banner .wrap { position: relative; margin-top: -40px; padding-top: 0; }
+  .banner.is-compact {
+    height: var(--bh-compact);
+    background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.78) 100%), var(--hero-image) center 40% / cover no-repeat;
+    -webkit-mask-image: none; mask-image: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .banner::after {
+    content: ""; position: absolute; left: max(18px, calc(50vw - 300px)); bottom: 10px;
+    font-family: var(--title); font-size: 1.45rem; line-height: 1; letter-spacing: .04em; color: var(--bone);
+    text-shadow: 0 1px 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .3s ease;
+  }
+  .banner.is-compact::after { content: "ALIEN BACK HEAD"; opacity: 1; }
+  .banner-spacer { height: calc(var(--bh-full) - 40px); }
+  body.has-banner .wrap { padding-top: 0; }
+  @media (prefers-reduced-motion: reduce) { .banner, .banner::after { transition: none; } }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <div id="banner" class="banner" role="img" aria-label="ALIEN BACK HEAD" hidden></div>
+<div id="bannerSpacer" class="banner-spacer" hidden></div>
 <div class="wrap">
 
   <header class="hero">
@@ -502,6 +523,21 @@ function resetForm() {
 }
 
 
+function initBannerScroll() {
+  const banner = $("#banner");
+  let compact = false, ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = window.scrollY || document.documentElement.scrollTop;
+    if (!compact && y > 140) compact = true;
+    else if (compact && y < 60) compact = false;
+    banner.classList.toggle("is-compact", compact);
+  };
+  window.addEventListener("scroll", () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+}
 function cssUrl(path) { return 'url("' + String(path).replace(/"/g, "%22") + '")'; }
 function applyImages() {
   if (CONFIG.LOGO_IMAGE) {
@@ -517,7 +553,10 @@ function applyImages() {
       document.querySelector(".hero").classList.add("has-image");
     } else {
       $("#banner").hidden = false;
+      $("#bannerSpacer").hidden = false;
       document.body.classList.add("has-banner");
+      document.documentElement.classList.add("has-banner");
+      initBannerScroll();
     }
   }
   if (CONFIG.BG_IMAGE) {
