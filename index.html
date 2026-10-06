@@ -63,25 +63,24 @@
     display: grid;
     grid-template-columns: 92px 1fr;
     background: var(--panel);
-    border: 1px solid var(--gold-dim);
+    border: 1px solid var(--gold);
     border-radius: 4px;
     overflow: hidden;
   }
-  .ticket.is-selected { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-dim); }
+  .ticket.is-selected { background: #17140d; box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 1px var(--gold); }
   .ticket .stub {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 16px 6px;
-    border-right: 2px dashed var(--gold-dim);
+    border-right: 2px dashed var(--gold);
     text-align: center;
   }
-  .ticket.is-selected .stub { border-right-color: var(--gold); }
-  .stub .mon { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
+    .stub .mon { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
   .stub .day { font-family: var(--display); font-size: 2.6rem; line-height: 1.05; color: var(--gold); }
   .stub .wd { font-size: .95rem; font-weight: 500; line-height: 1.2; color: var(--bone); }
   /* ticket notches on the perforation */
   .ticket::before, .ticket::after {
     content: ""; position: absolute; left: 92px; width: 16px; height: 16px;
-    background: var(--bg); border: 1px solid var(--gold-dim); border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--gold); border-radius: 50%;
     transform: translateX(-50%);
   }
   .ticket::before { top: -9px; }
@@ -97,7 +96,7 @@
   .left.low { color: var(--gold); }
   .left.none { color: var(--red); }
 
-  .state { padding: 28px 20px; border: 1px dashed var(--gold-dim); border-radius: 4px; color: var(--mute); text-align: center; }
+  .state { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 4px; color: var(--mute); text-align: center; }
   .state p { margin: 0 0 12px; }
   .state p:last-child { margin: 0; }
 
@@ -389,9 +388,7 @@ function fillSelect() {
 }
 
 function fillQty() {
-  const ev = events.find((e) => e.id === $("#eventId").value);
-  let max = CONFIG.MAX_TICKETS;
-  if (ev && ev.remaining != null) max = Math.max(1, Math.min(max, ev.remaining));
+  const max = CONFIG.MAX_TICKETS;
   const qty = $("#qty");
   const keep = Number(qty.value) || 1;
   qty.replaceChildren();
@@ -475,7 +472,7 @@ async function submitForm(ev) {
     if (!data.ok) {
       let msg = ERRORS[data.error];
       if (data.error === "soldout") {
-        msg = data.remaining > 0 ? "残り" + data.remaining + "枚です。枚数を減らして、もう一度お試しください。" : "このライブは満席になりました。";
+        msg = data.remaining > 0 ? "ご希望の枚数は受け付けられません。枚数を減らして、もう一度お試しください。" : "このライブは満席になりました。";
         loadEvents();
       }
       throw new Error(msg || "送信できませんでした。時間をおいて、もう一度お試しください。");
