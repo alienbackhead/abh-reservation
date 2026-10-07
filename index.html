@@ -190,6 +190,18 @@
   .confirm dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
   .confirm .error { margin: 0 0 14px; }
   .btn-row { display: grid; gap: 12px; margin-bottom: 16px; }
+  .linklike { appearance: none; background: none; border: 0; padding: 0; font: inherit; font-size: .9rem; color: var(--gold); text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: rgba(229,128,107,.12); }
+  .btn.danger.solid { background: var(--red); color: #000; }
+  .btn.danger.solid:hover { background: #ee917e; }
+  .notice { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--gold-dim); border-radius: 3px; font-size: .95rem; }
+  .okmsg { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--lime); color: var(--lime); border-radius: 3px; font-size: .95rem; }
+  .confirm .field { margin-bottom: 18px; }
+  .confirm .field:last-of-type { margin-bottom: 20px; }
+  .confirm .cancel-box { margin: 0 0 16px; padding: 16px; border: 1px solid var(--red); border-radius: 3px; }
+  .confirm .cancel-box p { margin: 0 0 12px; font-weight: 700; }
+  input:disabled, select:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
   .done .thanks { margin: 8px 0 22px; font-size: 1.1rem; font-weight: 700; color: var(--gold); }
   .done .code { font-family: var(--display); font-size: 3.2rem; line-height: 1.1; color: var(--lime); margin: 14px 0 4px; letter-spacing: .04em; }
   .done .label { color: var(--mute); font-size: .85rem; }
@@ -318,6 +330,7 @@
 
         <p class="fine">お支払いは当日、会場の受付でお願いします。</p>
         <p class="fine" id="contactText"></p>
+        <p class="fine"><button id="manageLink" class="linklike" type="button">すでに予約した方は、こちらから、確認・変更・キャンセルができます</button></p>
       </form>
     </div>
 
@@ -341,6 +354,66 @@
       <p class="fine">お支払いは当日、会場の受付でお願いします。</p>
     </div>
 
+
+    <div id="manage" class="confirm" hidden>
+      <h2>予約の確認・変更・キャンセル</h2>
+
+      <div id="mLookup">
+        <p class="fine" style="margin-bottom:18px">予約番号と、予約のときのメールアドレスを入力してください。</p>
+        <div class="field">
+          <label for="mId">予約番号</label>
+          <input id="mId" type="text" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABH-XXXX">
+        </div>
+        <div class="field">
+          <label for="mEmail">メールアドレス</label>
+          <input id="mEmail" type="email" inputmode="email" autocomplete="email" maxlength="100">
+        </div>
+        <p id="mError" class="error" role="alert" hidden></p>
+        <div class="btn-row">
+          <button id="mLookupBtn" class="btn primary block" type="button">予約を確認する</button>
+          <button id="mBackBtn" class="btn block" type="button">予約ページに戻る</button>
+        </div>
+      </div>
+
+      <div id="mDetail" hidden>
+        <p id="mStatus" class="notice" hidden></p>
+        <dl>
+          <dt>予約番号</dt><dd id="mCode"></dd>
+          <dt>ライブ</dt><dd id="mEvent"></dd>
+          <dt>日時</dt><dd id="mWhen"></dd>
+          <dt>会場</dt><dd id="mVenue"></dd>
+          <dt>締切</dt><dd id="mDeadline"></dd>
+        </dl>
+        <div class="field">
+          <label for="mName">お名前</label>
+          <input id="mName" type="text" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="mQty">枚数</label>
+          <select id="mQty"></select>
+        </div>
+        <div class="field">
+          <label for="mNote">備考<span class="opt">任意</span></label>
+          <textarea id="mNote" maxlength="200"></textarea>
+        </div>
+        <p id="mDetailError" class="error" role="alert" hidden></p>
+        <p id="mOk" class="okmsg" role="status" hidden></p>
+        <div id="mActions" class="btn-row">
+          <button id="mSaveBtn" class="btn primary block" type="button">変更を保存する</button>
+          <button id="mCancelBtn" class="btn danger block" type="button">この予約をキャンセルする</button>
+        </div>
+        <div id="mCancelConfirm" class="cancel-box" hidden>
+          <p>この予約をキャンセルしますか？この操作は、元に戻せません。</p>
+          <div class="btn-row" style="margin-bottom:0">
+            <button id="mCancelYes" class="btn danger solid block" type="button">キャンセルを確定する</button>
+            <button id="mCancelNo" class="btn block" type="button">やめる</button>
+          </div>
+        </div>
+        <div class="btn-row"><button id="mCloseBtn" class="btn block" type="button">予約ページに戻る</button></div>
+        <p class="fine" id="mContact"></p>
+      </div>
+    </div>
+
     <div id="done" class="done" hidden aria-live="polite">
       <h2>取り置きを確定しました</h2>
       <p class="thanks" id="doneThanks"></p>
@@ -358,7 +431,10 @@
       <p class="fine" id="doneMail"></p>
       <p class="fine">この画面のスクリーンショットを保存しておくと安心です。当日は、会場の受付でお名前をお伝えください。</p>
       <p class="fine" id="doneContact"></p>
-      <p style="margin:20px 0 0"><button id="again" class="btn block" type="button">別の予約をする</button></p>
+      <div class="btn-row" style="margin-top:20px">
+        <button id="manageFromDone" class="btn block" type="button">この予約を確認・変更・キャンセルする</button>
+        <button id="again" class="btn block" type="button">別の予約をする</button>
+      </div>
     </div>
   </section>
 
@@ -642,6 +718,7 @@ function showDone(d, email) {
   else if (d.mailSent === false) mailText = "確認メールを送れませんでした。予約は完了しています。上の予約番号を、控えておいてください。";
   else mailText = "同じ内容の予約が、すでに受け付けられています。";
   $("#doneMail").textContent = mailText;
+  lastReservation = { id: d.id, email: email };
   $("#confirm").hidden = true;
   $("#formArea").hidden = true;
   $("#done").hidden = false;
@@ -658,6 +735,145 @@ function resetForm() {
   $("#reserve").scrollIntoView({ block: "start" });
 }
 
+
+
+// ===== 予約の確認・変更・キャンセル =====
+const MANAGE_ERRORS = {
+  notfound: "予約番号か、メールアドレスが、違います。",
+  invalid: "予約番号（ABH-XXXX の形）と、メールアドレスを、正しく入力してください。",
+  locked: "入力の間違いが続いたため、しばらく受け付けられません。10分ほどあけて、お試しください。",
+  closed: "締切を過ぎているため、ここでは変更・キャンセルができません。",
+  cancelled: "この予約は、すでにキャンセルされています。",
+  soldout: "ご希望の枚数には、変更できません。枚数を減らして、お試しください。"
+};
+let managing = null;          // { id, email } 確認に成功した予約
+let lastReservation = null;   // 予約が終わった直後の、予約番号とメールアドレス
+
+function friendlyError(e, map) {
+  return e && e.message && e.message !== "Failed to fetch" ? e.message : "通信できませんでした。電波のよいところで、もう一度お試しください。";
+}
+function setBox(sel, msg) {
+  const box = $(sel);
+  box.textContent = msg || "";
+  box.hidden = !msg;
+}
+async function callManage(payload) {
+  const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+  return res.json();
+}
+
+function openManage(id, email) {
+  $("#formArea").hidden = true; $("#confirm").hidden = true; $("#done").hidden = true;
+  $("#manage").hidden = false;
+  $("#mLookup").hidden = false; $("#mDetail").hidden = true;
+  $("#mId").value = id || ""; $("#mEmail").value = email || "";
+  managing = null;
+  setBox("#mError", "");
+  $("#manage").scrollIntoView({ block: "start" });
+  if (!id) $("#mId").focus({ preventScroll: true });
+}
+function closeManage() {
+  $("#manage").hidden = true;
+  $("#formArea").hidden = false;
+  managing = null;
+  $("#reserve").scrollIntoView({ block: "start" });
+}
+
+async function manageLookup() {
+  setBox("#mError", "");
+  const id = $("#mId").value.trim().toUpperCase();
+  const email = $("#mEmail").value.trim();
+  if (!/^ABH-[A-Z2-9]{4}$/.test(id) || !EMAIL_RE.test(email)) return setBox("#mError", MANAGE_ERRORS.invalid);
+  const btn = $("#mLookupBtn");
+  btn.disabled = true; btn.textContent = "確認しています…";
+  try {
+    const data = await callManage({ action: "lookup", id, email });
+    if (!data.ok) throw new Error(MANAGE_ERRORS[data.error] || "確認できませんでした。時間をおいて、もう一度お試しください。");
+    managing = { id, email };
+    renderManage(data.reservation);
+  } catch (e) {
+    setBox("#mError", friendlyError(e));
+  } finally {
+    btn.disabled = false; btn.textContent = "予約を確認する";
+  }
+}
+
+function renderManage(r) {
+  const dt = parseDate(r.event.date);
+  $("#mLookup").hidden = true;
+  $("#mDetail").hidden = false;
+  $("#mCode").textContent = r.id;
+  $("#mEvent").textContent = r.event.title;
+  $("#mWhen").textContent = dt.y + "年" + dt.m + "月" + dt.d + "日(" + dt.w + ")" + (r.event.time ? " " + r.event.time : "");
+  $("#mVenue").textContent = r.event.venue || "";
+  $("#mDeadline").textContent = r.event.deadline || "";
+  $("#mName").value = r.name;
+  $("#mNote").value = r.note;
+  const qty = $("#mQty");
+  qty.replaceChildren();
+  const max = Math.max(CONFIG.MAX_TICKETS, r.qty);
+  for (let i = 1; i <= max; i++) qty.append(el("option", { value: String(i), text: i + "枚" }));
+  qty.value = String(r.qty);
+
+  const notice = $("#mStatus");
+  if (r.status === "キャンセル") { notice.textContent = "この予約は、キャンセル済みです。"; notice.hidden = false; }
+  else if (!r.canEdit) { notice.textContent = "締切を過ぎているため、ここでは変更・キャンセルができません。" + CONFIG.CONTACT_TEXT; notice.hidden = false; }
+  else notice.hidden = true;
+
+  for (const sel of ["#mName", "#mQty", "#mNote"]) $(sel).disabled = !r.canEdit;
+  $("#mActions").hidden = !r.canEdit;
+  $("#mCancelConfirm").hidden = true;
+  $("#mContact").textContent = CONFIG.CONTACT_TEXT;
+  setBox("#mDetailError", ""); setBox("#mOk", "");
+}
+
+async function manageSave() {
+  if (!managing) return;
+  setBox("#mDetailError", ""); setBox("#mOk", "");
+  const name = $("#mName").value.trim();
+  if (!name) return setBox("#mDetailError", "お名前を入力してください。");
+  const btn = $("#mSaveBtn");
+  btn.disabled = true; btn.textContent = "保存しています…";
+  try {
+    const data = await callManage({ action: "update", id: managing.id, email: managing.email, name, qty: Number($("#mQty").value), note: $("#mNote").value.trim() });
+    if (!data.ok) throw new Error(MANAGE_ERRORS[data.error] || "保存できませんでした。時間をおいて、もう一度お試しください。");
+    renderManage(data.reservation);
+    setBox("#mOk", "変更を保存しました。");
+    loadEvents();
+  } catch (e) {
+    setBox("#mDetailError", friendlyError(e));
+  } finally {
+    btn.disabled = false; btn.textContent = "変更を保存する";
+  }
+}
+
+function manageAskCancel() {
+  setBox("#mDetailError", ""); setBox("#mOk", "");
+  $("#mCancelConfirm").hidden = false;
+  $("#mActions").hidden = true;
+  $("#mCancelConfirm").scrollIntoView({ block: "nearest" });
+}
+function manageCancelNo() {
+  $("#mCancelConfirm").hidden = true;
+  $("#mActions").hidden = false;
+}
+async function manageCancelYes() {
+  if (!managing) return;
+  const btn = $("#mCancelYes");
+  btn.disabled = true; btn.textContent = "手続きしています…";
+  try {
+    const data = await callManage({ action: "cancel", id: managing.id, email: managing.email });
+    if (!data.ok) throw new Error(MANAGE_ERRORS[data.error] || "キャンセルできませんでした。時間をおいて、もう一度お試しください。");
+    renderManage(data.reservation);
+    setBox("#mOk", "キャンセルしました。またのご予約を、お待ちしています。");
+    loadEvents();
+  } catch (e) {
+    manageCancelNo();
+    setBox("#mDetailError", friendlyError(e));
+  } finally {
+    btn.disabled = false; btn.textContent = "キャンセルを確定する";
+  }
+}
 
 function initBannerScroll() {
   const banner = $("#banner");
@@ -710,6 +926,16 @@ $("#confirmBtn").addEventListener("click", sendReservation);
 $("#backBtn").addEventListener("click", backToForm);
 $("#eventId").addEventListener("change", () => { fillQty(); highlight(); });
 $("#again").addEventListener("click", resetForm);
+$("#manageLink").addEventListener("click", () => openManage());
+$("#manageFromDone").addEventListener("click", () => openManage(lastReservation && lastReservation.id, lastReservation && lastReservation.email));
+$("#mLookupBtn").addEventListener("click", manageLookup);
+$("#mBackBtn").addEventListener("click", closeManage);
+$("#mCloseBtn").addEventListener("click", closeManage);
+$("#mSaveBtn").addEventListener("click", manageSave);
+$("#mCancelBtn").addEventListener("click", manageAskCancel);
+$("#mCancelNo").addEventListener("click", manageCancelNo);
+$("#mCancelYes").addEventListener("click", manageCancelYes);
+for (const sel of ["#mId", "#mEmail"]) $(sel).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); manageLookup(); } });
 $("#lightbox").addEventListener("click", closeLightbox);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#lightbox").hidden) closeLightbox(); });
 loadEvents();
