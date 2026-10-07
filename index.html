@@ -112,9 +112,20 @@
     .ticket .body { padding: 14px 12px 14px 14px; }
   }
   /* 拡大表示 */
-  .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.93); cursor: zoom-out; }
+  .lightbox {
+    position: fixed; inset: 0; z-index: 100; cursor: zoom-out;
+    display: flex; align-items: center; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background: rgba(0,0,0,.93);
+  }
   .lightbox[hidden] { display: none; }
-  .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  /* 画像は、元の大きさではなく、画面の上下・左右に収まる大きさで表示する */
+  .lightbox img {
+    display: block; width: auto; height: auto; object-fit: contain;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+  }
   .lightbox .close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 1.3rem; line-height: 1;
     color: var(--bone); background: rgba(0,0,0,.6); border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer; }
 
@@ -433,10 +444,13 @@ function renderEvents() {
     );
     let thumb = null;
     if (imgUrl) {
-      const img = el("img", { src: imgUrl, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
+      // サムネイルは、小さいサイズ（=s480）で読み込む。読み込めなければ、元の大きさで試す
+      const small = imgUrl.replace(/=s\d+(?=\?|$)/, "=s480");
+      const img = el("img", { src: small, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
       thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openLightbox(imgUrl) }, img);
-      img.addEventListener("error", () => { // 読み込めないときは、画像の枠ごと消す
-        thumb.remove();
+      img.addEventListener("error", () => {
+        if (small !== imgUrl && img.dataset.retry !== "1") { img.dataset.retry = "1"; img.src = imgUrl; return; }
+        thumb.remove();                      // それでも読み込めないときは、画像の枠ごと消す
         body.classList.remove("has-thumb");
       });
     }
