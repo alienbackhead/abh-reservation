@@ -341,6 +341,7 @@
         <dt>ライブ</dt><dd id="cEvent"></dd>
         <dt>日時</dt><dd id="cWhen"></dd>
         <dt>会場</dt><dd id="cVenue"></dd>
+        <dt id="cPriceT">料金</dt><dd id="cPrice"></dd>
         <dt>お名前</dt><dd id="cName"></dd>
         <dt>メール</dt><dd id="cEmail"></dd>
         <dt>枚数</dt><dd id="cQty"></dd>
@@ -649,6 +650,8 @@ function showConfirm(ev) {
   $("#cEvent").textContent = target.title;
   $("#cWhen").textContent = dt.y + "年" + dt.m + "月" + dt.d + "日(" + dt.w + ")" + (target.time ? " " + target.time : "");
   $("#cVenue").textContent = target.venue || "";
+  $("#cPrice").textContent = target.price || "";
+  $("#cPriceT").hidden = $("#cPrice").hidden = !target.price;   // 料金が空のライブでは、この行を出さない
   $("#cName").textContent = name;
   $("#cEmail").textContent = email;
   $("#cQty").textContent = qty + "枚";
