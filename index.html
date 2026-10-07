@@ -449,7 +449,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbw6mNESZKKSjzaQK1bcNfa_Q_Q4xnbzo1RFsUEHy29PDST_Qyrd4jcJR__hK0oow-81/exec",   // Apps Script をウェブアプリとして公開したときの URL（…/exec）
   MAX_TICKETS: 99, // 1回の予約で選べる最大枚数（Code.gs の MAX_TICKETS と合わせる）
   THANKS_TEXT: "ありがとうございます！当日、会場でお待ちしています。", // 予約が終わったときに出す、お礼の言葉
-  CONTACT_TEXT: "キャンセル・変更は、ALIEN BACK HEAD公式XアカウントのDMまでご連絡ください。",
+  CONTACT_TEXT: "ALIEN BACK HEAD公式XアカウントのDMまでご連絡ください。", // 締切を過ぎたときなど、ページでできないときの連絡先
   LOGO_IMAGE: "",  // タイトルの文字の代わりに出すロゴ画像。例: "logo.png"。空なら文字のタイトル
   HERO_IMAGE: "banner.jpg",  // ページ上部の大きな画像。例: "banner.jpg"（index.html と同じ場所に置く）。空なら出さない
   HERO_MODE: "banner", // "banner" = 画像を上に置いて、下をにじませる / "cover" = 画像の上にタイトルを重ねる
@@ -823,7 +823,7 @@ function renderManage(r) {
   for (const sel of ["#mName", "#mQty", "#mNote"]) $(sel).disabled = !r.canEdit;
   $("#mActions").hidden = !r.canEdit;
   $("#mCancelConfirm").hidden = true;
-  $("#mContact").textContent = CONFIG.CONTACT_TEXT;
+  $("#mContact").textContent = "締切を過ぎた場合は、" + CONFIG.CONTACT_TEXT;
   setBox("#mDetailError", ""); setBox("#mOk", "");
 }
 
@@ -918,8 +918,8 @@ function applyImages() {
 }
 
 applyImages();
-$("#contactText").textContent = CONFIG.CONTACT_TEXT;
-$("#doneContact").textContent = CONFIG.CONTACT_TEXT;
+$("#contactText").textContent = "キャンセル・変更は、下のリンクから、予約の締切までできます。締切を過ぎた場合は、" + CONFIG.CONTACT_TEXT;
+$("#doneContact").textContent = "キャンセル・変更は、上のボタンから、予約の締切までできます。締切を過ぎた場合は、" + CONFIG.CONTACT_TEXT;
 $("#doneThanks").textContent = CONFIG.THANKS_TEXT;
 $("#form").addEventListener("submit", showConfirm);
 $("#confirmBtn").addEventListener("click", sendReservation);
