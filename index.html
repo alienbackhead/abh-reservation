@@ -6,6 +6,10 @@
 <title>ALIEN BACK HEAD 取り置き予約</title>
 <meta name="description" content="ALIEN BACK HEAD のライブの取り置き予約。お支払いは当日、会場で。">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Pirata+One&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
@@ -59,9 +63,10 @@
   /* ---------- tickets ---------- */
   .tickets { display: grid; gap: 14px; }
   .ticket {
+    --stub-w: 92px;
     position: relative;
     display: grid;
-    grid-template-columns: 92px 1fr;
+    grid-template-columns: var(--stub-w) 1fr;
     background: var(--panel);
     border: 1px solid var(--gold);
     border-radius: 4px;
@@ -79,13 +84,40 @@
   .stub .wd { font-size: .95rem; font-weight: 500; line-height: 1.2; color: var(--bone); }
   /* ticket notches on the perforation */
   .ticket::before, .ticket::after {
-    content: ""; position: absolute; left: 92px; width: 16px; height: 16px;
+    content: ""; position: absolute; left: var(--stub-w); width: 16px; height: 16px;
     background: var(--bg); border: 1px solid var(--gold); border-radius: 50%;
     transform: translateX(-50%);
   }
   .ticket::before { top: -9px; }
   .ticket::after { bottom: -9px; }
   .ticket .body { padding: 16px 16px 16px 18px; min-width: 0; }
+  /* フライヤーのサムネイル（右側）。ボタンは、下に横いっぱいで置く */
+  .ticket .body.has-thumb {
+    --thumb-w: clamp(76px, 22vw, 148px);
+    display: grid; align-items: start; gap: 0 14px;
+    grid-template-columns: minmax(0, 1fr) var(--thumb-w);
+    grid-template-areas: "info thumb" "row row";
+  }
+  .ticket .info { grid-area: info; min-width: 0; }
+  .ticket .thumb { grid-area: thumb; }
+  .ticket .body.has-thumb .row { grid-area: row; }
+  .thumb {
+    appearance: none; margin: 0; padding: 0; cursor: zoom-in;
+    display: block; overflow: hidden; line-height: 0;
+    background: #111; border: 1px solid var(--gold-dim); border-radius: 3px;
+  }
+  .thumb img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: center top; }
+  @media (max-width: 520px) {
+    .ticket { --stub-w: 78px; }
+    .ticket .body { padding: 14px 12px 14px 14px; }
+  }
+  /* 拡大表示 */
+  .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.93); cursor: zoom-out; }
+  .lightbox[hidden] { display: none; }
+  .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lightbox .close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 1.3rem; line-height: 1;
+    color: var(--bone); background: rgba(0,0,0,.6); border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer; }
+
   .ticket h3 { margin: 0; font-size: 1.05rem; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; }
   .ticket dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .9rem; }
   .ticket dt { color: var(--mute); }
@@ -140,6 +172,14 @@
   /* ---------- done ---------- */
   .done { border: 1px solid var(--gold); border-radius: 4px; background: var(--panel); padding: 28px 22px; }
   .done h2 { font-size: 1.35rem; margin-bottom: 4px; }
+  .confirm { border: 1px solid var(--gold); border-radius: 4px; background: var(--panel); padding: 26px 22px; }
+  .confirm h2 { font-size: 1.25rem; margin-bottom: 6px; }
+  .confirm dl { margin: 18px 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
+  .confirm dt { color: var(--mute); }
+  .confirm dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .confirm .error { margin: 0 0 14px; }
+  .btn-row { display: grid; gap: 12px; margin-bottom: 16px; }
+  .done .thanks { margin: 8px 0 22px; font-size: 1.1rem; font-weight: 700; color: var(--gold); }
   .done .code { font-family: var(--display); font-size: 3.2rem; line-height: 1.1; color: var(--lime); margin: 14px 0 4px; letter-spacing: .04em; }
   .done .label { color: var(--mute); font-size: .85rem; }
   .done dl { margin: 18px 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
@@ -210,6 +250,7 @@
 <body>
 <div id="banner" class="banner" role="img" aria-label="ALIEN BACK HEAD" hidden></div>
 <div id="bannerSpacer" class="banner-spacer" hidden></div>
+<div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="フライヤーの拡大表示" hidden><button class="close" type="button" aria-label="閉じる">✕</button><img alt="フライヤー"></div>
 <div class="wrap">
 
   <header class="hero">
@@ -241,6 +282,12 @@
         </div>
 
         <div class="field">
+          <label for="email">メールアドレス</label>
+          <input id="email" name="email" type="email" inputmode="email" maxlength="100" autocomplete="email" required>
+          <p class="hint">予約の確認メールをお送りします。届かないときは、迷惑メールのフォルダも見てください。</p>
+        </div>
+
+        <div class="field">
           <label for="qty">枚数</label>
           <select id="qty" name="qty" required></select>
         </div>
@@ -256,15 +303,36 @@
 
         <p id="error" class="error" role="alert" hidden></p>
 
-        <button id="submit" class="btn primary block" type="submit">取り置きを確定する</button>
+        <button id="submit" class="btn primary block" type="submit">入力内容を確認する</button>
 
         <p class="fine">お支払いは当日、会場の受付でお願いします。</p>
         <p class="fine" id="contactText"></p>
       </form>
     </div>
 
+    <div id="confirm" class="confirm" hidden>
+      <h2>入力内容をご確認ください</h2>
+      <p class="fine">この内容でよければ、下のボタンを押してください。まだ予約は完了していません。</p>
+      <dl>
+        <dt>ライブ</dt><dd id="cEvent"></dd>
+        <dt>日時</dt><dd id="cWhen"></dd>
+        <dt>会場</dt><dd id="cVenue"></dd>
+        <dt>お名前</dt><dd id="cName"></dd>
+        <dt>メール</dt><dd id="cEmail"></dd>
+        <dt>枚数</dt><dd id="cQty"></dd>
+        <dt id="cNoteT">備考</dt><dd id="cNote"></dd>
+      </dl>
+      <p id="cError" class="error" role="alert" hidden></p>
+      <div class="btn-row">
+        <button id="confirmBtn" class="btn primary block" type="button">この内容で取り置きを確定する</button>
+        <button id="backBtn" class="btn block" type="button">入力に戻る</button>
+      </div>
+      <p class="fine">お支払いは当日、会場の受付でお願いします。</p>
+    </div>
+
     <div id="done" class="done" hidden aria-live="polite">
       <h2>取り置きを確定しました</h2>
+      <p class="thanks" id="doneThanks"></p>
       <div class="stamp">
         <div class="label">予約番号</div>
         <div class="code" id="doneCode"></div>
@@ -276,6 +344,7 @@
         <dt>お名前</dt><dd id="doneName"></dd>
         <dt>枚数</dt><dd id="doneQty"></dd>
       </dl>
+      <p class="fine" id="doneMail"></p>
       <p class="fine">この画面のスクリーンショットを保存しておくと安心です。当日は、会場の受付でお名前をお伝えください。</p>
       <p class="fine" id="doneContact"></p>
       <p style="margin:20px 0 0"><button id="again" class="btn block" type="button">別の予約をする</button></p>
@@ -283,7 +352,7 @@
   </section>
 
   <footer>
-    <p>いただいた名前と枚数は、取り置きの受付のためだけに使います。ライブ終了後に削除します。</p>
+    <p>いただいたお名前、メールアドレス、枚数は、取り置きの受付と、確認メールの送信のためだけに使います。ライブ終了後に削除します。</p>
   </footer>
 </div>
 
@@ -292,6 +361,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbw6mNESZKKSjzaQK1bcNfa_Q_Q4xnbzo1RFsUEHy29PDST_Qyrd4jcJR__hK0oow-81/exec",   // Apps Script をウェブアプリとして公開したときの URL（…/exec）
   MAX_TICKETS: 99, // 1回の予約で選べる最大枚数（Code.gs の MAX_TICKETS と合わせる）
+  THANKS_TEXT: "ありがとうございます！当日、会場でお待ちしています。", // 予約が終わったときに出す、お礼の言葉
   CONTACT_TEXT: "キャンセル・変更は、ALIEN BACK HEAD公式XアカウントのDMまでご連絡ください。",
   LOGO_IMAGE: "",  // タイトルの文字の代わりに出すロゴ画像。例: "logo.png"。空なら文字のタイトル
   HERO_IMAGE: "banner.jpg",  // ページ上部の大きな画像。例: "banner.jpg"（index.html と同じ場所に置く）。空なら出さない
@@ -348,18 +418,29 @@ function renderEvents() {
     add("時間", ev.time);
     add("料金", ev.price);
     add("締切", ev.deadline);
-    const body = el("div", { class: "body" },
+    const imgUrl = /^https:\/\//i.test(ev.image || "") ? ev.image : "";
+    const info = el("div", { class: "info" },
       el("h3", { text: ev.title }),
       dl,
-      ev.note ? el("p", { class: "note", text: ev.note }) : null,
-      el("div", { class: "row" },
-        el("button", {
-          class: "btn small", type: "button", text: full ? "満席です" : "このライブを予約する",
-          ...(full ? { disabled: "" } : {}),
-          onclick: () => chooseEvent(ev.id)
-        })
-      )
+      ev.note ? el("p", { class: "note", text: ev.note }) : null
     );
+    const row = el("div", { class: "row" },
+      el("button", {
+        class: "btn small", type: "button", text: full ? "満席です" : "このライブを予約する",
+        ...(full ? { disabled: "" } : {}),
+        onclick: () => chooseEvent(ev.id)
+      })
+    );
+    let thumb = null;
+    if (imgUrl) {
+      const img = el("img", { src: imgUrl, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
+      thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openLightbox(imgUrl) }, img);
+      img.addEventListener("error", () => { // 読み込めないときは、画像の枠ごと消す
+        thumb.remove();
+        body.classList.remove("has-thumb");
+      });
+    }
+    const body = el("div", { class: "body" + (thumb ? " has-thumb" : "") }, info, thumb, row);
     const ticket = el("article", { class: "ticket" + (selected === ev.id ? " is-selected" : "") },
       el("div", { class: "stub" },
         el("span", { class: "mon", text: dt.m + "月" }),
@@ -371,6 +452,18 @@ function renderEvents() {
     ticket.dataset.id = ev.id;
     box.append(ticket);
   }
+}
+
+function openLightbox(url) {
+  const box = $("#lightbox");
+  box.querySelector("img").src = url;
+  box.hidden = false;
+  box.querySelector(".close").focus();
+}
+function closeLightbox() {
+  const box = $("#lightbox");
+  box.hidden = true;
+  box.querySelector("img").removeAttribute("src");
 }
 
 function fillSelect() {
@@ -441,53 +534,88 @@ const ERRORS = {
   closed: "このライブの受付は終了しました。",
   notfound: "このライブは見つかりませんでした。ページを読み込み直してください。",
   invalid: "入力内容を確認してください。",
-  toofast: "もう一度、確定ボタンを押してください。"
+  toofast: "もう一度、確定ボタンを押してください。",
+  toomany: "同じメールアドレスからの予約が多いため、いまは受け付けられません。時間をおいて、お試しください。"
 };
+const EMAIL_RE = /^[^\s@,;<>"']+@[^\s@,;<>"']+\.[^\s@,;<>"']+$/;
+let pending = null;   // 確認画面に出している入力内容
 
-async function submitForm(ev) {
+function showConfirm(ev) {
   ev.preventDefault();
   showError("");
   const eventId = $("#eventId").value;
   const name = $("#name").value.trim();
+  const email = $("#email").value.trim();
   const qty = Number($("#qty").value);
-  if (!eventId) return showError("ライブを選んでください。");
+  const note = $("#note").value.trim();
+  const target = events.find((e) => e.id === eventId);
+  if (!eventId || !target) return showError("ライブを選んでください。");
   if (!name) return showError("お名前を入力してください。");
+  if (!EMAIL_RE.test(email) || email.length > 100) return showError("メールアドレスを正しく入力してください。");
   if (!(qty >= 1)) return showError("枚数を選んでください。");
 
-  const btn = $("#submit");
+  pending = { eventId, name, email, qty, note, hp: $("#website").value };
+  const dt = parseDate(target.date);
+  $("#cEvent").textContent = target.title;
+  $("#cWhen").textContent = dt.y + "年" + dt.m + "月" + dt.d + "日(" + dt.w + ")" + (target.time ? " " + target.time : "");
+  $("#cVenue").textContent = target.venue || "";
+  $("#cName").textContent = name;
+  $("#cEmail").textContent = email;
+  $("#cQty").textContent = qty + "枚";
+  $("#cNote").textContent = note;
+  $("#cNoteT").hidden = $("#cNote").hidden = !note;
+  $("#cError").hidden = true;
+  $("#formArea").hidden = true;
+  $("#confirm").hidden = false;
+  $("#confirm").scrollIntoView({ block: "start" });
+}
+
+function backToForm() {
+  $("#confirm").hidden = true;
+  $("#formArea").hidden = false;
+  $("#reserve").scrollIntoView({ block: "start" });
+}
+
+function showConfirmError(msg) {
+  const box = $("#cError");
+  box.textContent = msg;
+  box.hidden = false;
+  box.scrollIntoView({ block: "nearest" });
+}
+
+async function sendReservation() {
+  if (!pending) return;
+  const btn = $("#confirmBtn");
   btn.disabled = true;
   btn.textContent = "送信しています…";
+  $("#cError").hidden = true;
   try {
     const res = await fetch(CONFIG.API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        eventId, name, qty,
-        note: $("#note").value.trim(),
-        hp: $("#website").value,
-        elapsed: Date.now() - shownAt
-      })
+      body: JSON.stringify({ ...pending, elapsed: Date.now() - shownAt })
     });
     const data = await res.json();
     if (!data.ok) {
       let msg = ERRORS[data.error];
       if (data.error === "soldout") {
-        msg = data.remaining > 0 ? "ご希望の枚数は受け付けられません。枚数を減らして、もう一度お試しください。" : "このライブは満席になりました。";
+        msg = data.remaining > 0 ? "ご希望の枚数は受け付けられません。「入力に戻る」で、枚数を減らしてください。" : "このライブは満席になりました。";
         loadEvents();
       }
       throw new Error(msg || "送信できませんでした。時間をおいて、もう一度お試しください。");
     }
-    showDone(data);
+    showDone(data, pending.email);
+    pending = null;
     loadEvents();
   } catch (e) {
-    showError(e && e.message && e.message !== "Failed to fetch" ? e.message : "送信できませんでした。電波のよいところで、もう一度お試しください。");
+    showConfirmError(e && e.message && e.message !== "Failed to fetch" ? e.message : "送信できませんでした。電波のよいところで、もう一度お試しください。");
   } finally {
     btn.disabled = false;
-    btn.textContent = "取り置きを確定する";
+    btn.textContent = "この内容で取り置きを確定する";
   }
 }
 
-function showDone(d) {
+function showDone(d, email) {
   const dt = parseDate(d.event.date);
   $("#doneCode").textContent = d.id;
   $("#doneEvent").textContent = d.event.title;
@@ -495,6 +623,12 @@ function showDone(d) {
   $("#doneVenue").textContent = d.event.venue || "";
   $("#doneName").textContent = d.name;
   $("#doneQty").textContent = d.qty + "枚";
+  let mailText = "";
+  if (d.mailSent === true) mailText = email + " に、確認メールを送りました。届かないときは、迷惑メールのフォルダも確認してください。";
+  else if (d.mailSent === false) mailText = "確認メールを送れませんでした。予約は完了しています。上の予約番号を、控えておいてください。";
+  else mailText = "同じ内容の予約が、すでに受け付けられています。";
+  $("#doneMail").textContent = mailText;
+  $("#confirm").hidden = true;
   $("#formArea").hidden = true;
   $("#done").hidden = false;
   $("#done").scrollIntoView({ block: "start" });
@@ -556,9 +690,14 @@ function applyImages() {
 applyImages();
 $("#contactText").textContent = CONFIG.CONTACT_TEXT;
 $("#doneContact").textContent = CONFIG.CONTACT_TEXT;
-$("#form").addEventListener("submit", submitForm);
+$("#doneThanks").textContent = CONFIG.THANKS_TEXT;
+$("#form").addEventListener("submit", showConfirm);
+$("#confirmBtn").addEventListener("click", sendReservation);
+$("#backBtn").addEventListener("click", backToForm);
 $("#eventId").addEventListener("change", () => { fillQty(); highlight(); });
 $("#again").addEventListener("click", resetForm);
+$("#lightbox").addEventListener("click", closeLightbox);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#lightbox").hidden) closeLightbox(); });
 loadEvents();
 </script>
 </body>
