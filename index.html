@@ -682,13 +682,20 @@ async function sendReservation() {
   btn.disabled = true;
   btn.textContent = "送信しています…";
   $("#cError").hidden = true;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 45000);
   try {
     const res = await fetch(CONFIG.API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ ...pending, elapsed: Date.now() - shownAt })
+      body: JSON.stringify({ ...pending, elapsed: Date.now() - shownAt }),
+      signal: ctl.signal
     });
-    const data = await res.json();
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (_) {
+      throw new Error("結果を受け取れませんでした。予約は保存されている可能性があります。確認メールが届いていないか確認してください（二重に予約しないでください）。");
+    }
     if (!data.ok) {
       let msg = ERRORS[data.error];
       if (data.error === "soldout") {
@@ -701,8 +708,13 @@ async function sendReservation() {
     pending = null;
     loadEvents();
   } catch (e) {
-    showConfirmError(e && e.message && e.message !== "Failed to fetch" ? e.message : "送信できませんでした。電波のよいところで、もう一度お試しください。");
+    if (e && e.name === "AbortError") {
+      showConfirmError("応答がありませんでした。予約が保存されている場合があります。「予約の確認・変更・キャンセル」で確認するか、時間をおいてお試しください。");
+    } else {
+      showConfirmError(e && e.message && e.message !== "Failed to fetch" ? e.message : "送信できませんでした。電波のよいところで、もう一度お試しください。");
+    }
   } finally {
+    clearTimeout(timer);
     btn.disabled = false;
     btn.textContent = "この内容で取り置きを確定する";
   }
