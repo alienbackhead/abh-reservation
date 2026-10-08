@@ -80,9 +80,10 @@
     text-align: center;
     position: relative;
   }
-  /* 今年と違う年のライブだけ、スタブ上部に年を出す（月・日・曜日の位置は動かさない） */
-  .stub .yr { position: absolute; top: 5px; left: 0; right: 0; font-size: .72rem; line-height: 1; letter-spacing: .08em; color: var(--gold); opacity: .85; }
-    .stub .mon { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
+  /* 今年と違う年のライブだけ、月のすぐ上に年を出す（月・日・曜日の位置は動かさない） */
+  .stub .yr { position: absolute; bottom: 100%; left: 0; right: 0; }
+    .stub .mon, .stub .yr { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
+  .stub .mon { position: relative; }
   .stub .day { font-family: var(--display); font-size: 2.6rem; line-height: 1.05; color: var(--gold); }
   .stub .wd { font-size: .95rem; font-weight: 500; line-height: 1.2; color: var(--bone); }
   /* ticket notches on the perforation */
@@ -554,8 +555,9 @@ function buildTicket(ev, selected, past) {
   const body = el("div", { class: "body" + (thumb ? " has-thumb" : "") }, info, thumb, row);
   const ticket = el("article", { class: "ticket" + (past ? " is-past" : "") + (!past && selected === ev.id ? " is-selected" : "") },
     el("div", { class: "stub" },
-      dt.y !== new Date().getFullYear() ? el("span", { class: "yr", text: String(dt.y) }) : null,
-      el("span", { class: "mon", text: dt.m + "月" }),
+      el("span", { class: "mon", text: dt.m + "月" },
+        dt.y !== new Date().getFullYear() ? el("span", { class: "yr", text: String(dt.y) }) : null
+      ),
       el("span", { class: "day", text: String(dt.d) }),
       el("span", { class: "wd", text: dt.w + "曜" })
     ),
