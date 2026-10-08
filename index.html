@@ -78,7 +78,10 @@
     padding: 16px 6px;
     border-right: 2px dashed var(--gold);
     text-align: center;
+    position: relative;
   }
+  /* 今年と違う年のライブだけ、スタブ上部に年を出す（月・日・曜日の位置は動かさない） */
+  .stub .yr { position: absolute; top: 5px; left: 0; right: 0; font-size: .72rem; line-height: 1; letter-spacing: .08em; color: var(--gold); opacity: .85; }
     .stub .mon { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--bone); }
   .stub .day { font-family: var(--display); font-size: 2.6rem; line-height: 1.05; color: var(--gold); }
   .stub .wd { font-size: .95rem; font-weight: 500; line-height: 1.2; color: var(--bone); }
@@ -139,6 +142,13 @@
   .left.low { color: var(--gold); }
   .left.none { color: var(--red); }
 
+  /* 過去の開催分（初めは閉じておく） */
+  .past-box { margin-top: 22px; }
+  .past-toggle { width: 100%; }
+  #past { margin-top: 16px; }
+  .ticket.is-past { opacity: .68; }
+  .ticket.is-past .stub .day { color: var(--bone); }
+  .ticket .closed-label { font-size: .85rem; color: var(--mute); }
   .state { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 4px; color: var(--mute); text-align: center; }
   .state p { margin: 0 0 12px; }
   .state p:last-child { margin: 0; }
@@ -285,6 +295,10 @@
   <section aria-labelledby="events-h">
     <h2 id="events-h">予約できるライブ</h2>
     <div id="events" class="tickets" aria-live="polite"></div>
+    <div id="pastBox" class="past-box" hidden>
+      <button id="pastToggle" class="btn ghost past-toggle" type="button" aria-expanded="false" aria-controls="past"></button>
+      <div id="past" class="tickets" hidden></div>
+    </div>
   </section>
 
   <section id="reserve" aria-labelledby="form-h">
@@ -489,60 +503,91 @@ function showState(message, withRetry) {
   box.append(state);
 }
 
-function renderEvents() {
-  const box = $("#events");
-  box.replaceChildren();
-  if (!events.length) {
-    showState("いま予約できるライブはありません。次の予定が決まったらXでお知らせします。");
-    return;
-  }
-  const selected = $("#eventId").value;
-  for (const ev of events) {
-    const dt = parseDate(ev.date);
-    const full = ev.remaining != null && ev.remaining <= 0; // 満席のときは、ボタンを押せなくする（残り枚数は表示しない）
-    const dl = el("dl");
-    const add = (k, v) => { if (v) { dl.append(el("dt", { text: k }), el("dd", { text: v })); } };
-    add("会場", ev.venue);
-    add("時間", ev.time);
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+const isPast = (ev) => String(ev.date) < todayStr();   // 開催日が今日より前
+const isBookable = (ev) => !ev.closed && !isPast(ev);   // 締切を過ぎたもの（closed）は、予約できない
+
+function buildTicket(ev, selected, past) {
+  const dt = parseDate(ev.date);
+  const full = ev.remaining != null && ev.remaining <= 0; // 満席のときは、ボタンを押せなくする（残り枚数は表示しない）
+  const dl = el("dl");
+  const add = (k, v) => { if (v) { dl.append(el("dt", { text: k }), el("dd", { text: v })); } };
+  add("会場", ev.venue);
+  add("時間", ev.time);
+  if (!past) {
     add("料金", ev.price);
-    add("締切", ev.deadline);
-    const imgUrl = /^https:\/\//i.test(ev.image || "") ? ev.image : "";
-    const info = el("div", { class: "info" },
-      el("h3", { text: ev.title }),
-      dl,
-      ev.note ? el("p", { class: "note", text: ev.note }) : null
-    );
-    const row = el("div", { class: "row" },
+    if (!ev.closed) add("締切", ev.deadline);
+  }
+  const imgUrl = /^https:\/\//i.test(ev.image || "") ? ev.image : "";
+  const info = el("div", { class: "info" },
+    el("h3", { text: ev.title }),
+    dl,
+    !past && ev.note ? el("p", { class: "note", text: ev.note }) : null
+  );
+  let row = null;
+  if (!past) {
+    const label = ev.closed ? "受付は終了しました" : full ? "満席です" : "このライブを予約する";
+    const off = ev.closed || full;
+    row = el("div", { class: "row" },
       el("button", {
-        class: "btn small", type: "button", text: full ? "満席です" : "このライブを予約する",
-        ...(full ? { disabled: "" } : {}),
+        class: "btn small", type: "button", text: label,
+        ...(off ? { disabled: "" } : {}),
         onclick: () => chooseEvent(ev.id)
       })
     );
-    let thumb = null;
-    if (imgUrl) {
-      // サムネイルは、小さいサイズ（=s480）で読み込む。読み込めなければ、元の大きさで試す
-      const small = imgUrl.replace(/=s\d+(?=\?|$)/, "=s480");
-      const img = el("img", { src: small, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
-      thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openLightbox(imgUrl) }, img);
-      img.addEventListener("error", () => {
-        if (small !== imgUrl && img.dataset.retry !== "1") { img.dataset.retry = "1"; img.src = imgUrl; return; }
-        thumb.remove();                      // それでも読み込めないときは、画像の枠ごと消す
-        body.classList.remove("has-thumb");
-      });
-    }
-    const body = el("div", { class: "body" + (thumb ? " has-thumb" : "") }, info, thumb, row);
-    const ticket = el("article", { class: "ticket" + (selected === ev.id ? " is-selected" : "") },
-      el("div", { class: "stub" },
-        el("span", { class: "mon", text: dt.m + "月" }),
-        el("span", { class: "day", text: String(dt.d) }),
-        el("span", { class: "wd", text: dt.w + "曜" })
-      ),
-      body
-    );
-    ticket.dataset.id = ev.id;
-    box.append(ticket);
   }
+  let thumb = null;
+  if (imgUrl) {
+    // サムネイルは、小さいサイズ（=s480）で読み込む。読み込めなければ、元の大きさで試す
+    const small = imgUrl.replace(/=s\d+(?=\?|$)/, "=s480");
+    const img = el("img", { src: small, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
+    thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openLightbox(imgUrl) }, img);
+    img.addEventListener("error", () => {
+      if (small !== imgUrl && img.dataset.retry !== "1") { img.dataset.retry = "1"; img.src = imgUrl; return; }
+      thumb.remove();                      // それでも読み込めないときは、画像の枠ごと消す
+      body.classList.remove("has-thumb");
+    });
+  }
+  const body = el("div", { class: "body" + (thumb ? " has-thumb" : "") }, info, thumb, row);
+  const ticket = el("article", { class: "ticket" + (past ? " is-past" : "") + (!past && selected === ev.id ? " is-selected" : "") },
+    el("div", { class: "stub" },
+      dt.y !== new Date().getFullYear() ? el("span", { class: "yr", text: String(dt.y) }) : null,
+      el("span", { class: "mon", text: dt.m + "月" }),
+      el("span", { class: "day", text: String(dt.d) }),
+      el("span", { class: "wd", text: dt.w + "曜" })
+    ),
+    body
+  );
+  ticket.dataset.id = ev.id;
+  return ticket;
+}
+
+let pastOpen = false;
+function renderEvents() {
+  const box = $("#events");
+  box.replaceChildren();
+  const upcoming = events.filter((e) => !isPast(e));
+  const past = events.filter(isPast).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));  // 新しい順
+  if (!upcoming.length) {
+    showState("いま予約できるライブはありません。次の予定が決まったらXでお知らせします。");
+  } else {
+    const selected = $("#eventId").value;
+    for (const ev of upcoming) box.append(buildTicket(ev, selected, false));
+  }
+  // 過去の開催分：ボタンを押すと開く
+  const pastBox = $("#pastBox"), list = $("#past"), toggle = $("#pastToggle");
+  pastBox.hidden = !past.length;
+  list.replaceChildren(...past.map((ev) => buildTicket(ev, "", true)));
+  const sync = () => {
+    list.hidden = !pastOpen;
+    toggle.setAttribute("aria-expanded", String(pastOpen));
+    toggle.textContent = pastOpen ? "過去の開催分を閉じる" : "過去の開催分を表示（" + past.length + "件）";
+  };
+  toggle.onclick = () => { pastOpen = !pastOpen; sync(); };
+  sync();
 }
 
 function openLightbox(url) {
@@ -560,14 +605,16 @@ function closeLightbox() {
 function fillSelect() {
   const sel = $("#eventId");
   const keep = sel.value;
+  const list = events.filter(isBookable);   // 選べるのは、予約できるライブだけ
+  const isFull = (e) => e.remaining != null && e.remaining <= 0;
   sel.replaceChildren(el("option", { value: "", text: "ライブを選んでください" }));
-  for (const ev of events) {
+  for (const ev of list) {
     const dt = parseDate(ev.date);
-    const full = ev.remaining != null && ev.remaining <= 0;
-    sel.append(el("option", { value: ev.id, text: dt.m + "/" + dt.d + "(" + dt.w + ") " + ev.title + (full ? "（満席）" : ""), ...(full ? { disabled: "" } : {}) }));
+    const full = isFull(ev);
+    sel.append(el("option", { value: ev.id, text: (dt.y !== new Date().getFullYear() ? dt.y + "/" : "") + dt.m + "/" + dt.d + "(" + dt.w + ") " + ev.title + (full ? "（満席）" : ""), ...(full ? { disabled: "" } : {}) }));
   }
-  if (events.some((e) => e.id === keep)) sel.value = keep;
-  else if (events.length === 1 && !(events[0].remaining != null && events[0].remaining <= 0)) sel.value = events[0].id;
+  if (list.some((e) => e.id === keep)) sel.value = keep;
+  else if (list.length === 1 && !isFull(list[0])) sel.value = list[0].id;
   fillQty();
 }
 
