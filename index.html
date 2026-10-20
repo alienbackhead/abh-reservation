@@ -219,6 +219,10 @@
   .done dl { margin: 18px 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
   .done dt { color: var(--mute); }
   .done dd { margin: 0; overflow-wrap: anywhere; }
+  .cal-box { margin: 4px 0 18px; padding: 14px; border: 1px solid var(--gold-dim); border-radius: 3px; }
+  .cal-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; }
+  .cal-row .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  .cal-box .fine { margin: 10px 0 0; }
   .done .stamp { animation: stamp .35s cubic-bezier(.2,.9,.3,1.2) both; }
   @keyframes stamp { from { opacity: 0; transform: scale(1.35) rotate(-4deg); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .done .stamp { animation: none; } }
@@ -444,6 +448,14 @@
         <dt>お名前</dt><dd id="doneName"></dd>
         <dt>枚数</dt><dd id="doneQty"></dd>
       </dl>
+      <div id="calBox" class="cal-box" hidden>
+        <div class="label">カレンダーに予定を入れる</div>
+        <div class="cal-row">
+          <a id="calGoogle" class="btn small" target="_blank" rel="noopener">Googleカレンダー</a>
+          <button id="calIcs" class="btn small" type="button">iPhone・その他（.ics）</button>
+        </div>
+        <p class="fine" id="calNote"></p>
+      </div>
       <p class="fine" id="doneMail"></p>
       <p class="fine">この画面のスクリーンショットを保存しておくと安心です。当日は、会場の受付でお名前をお伝えください。</p>
       <p class="fine" id="doneContact"></p>
@@ -783,10 +795,105 @@ function showDone(d, email) {
   else mailText = "同じ内容の予約が、すでに受け付けられています。";
   $("#doneMail").textContent = mailText;
   lastReservation = { id: d.id, email: email };
+  setupCalendar(d);
   $("#confirm").hidden = true;
   $("#formArea").hidden = true;
   $("#done").hidden = false;
   $("#done").scrollIntoView({ block: "start" });
+}
+
+// ===== カレンダーに追加（Googleカレンダー / .ics） =====
+const CAL_DEFAULT_HOURS = 3;   // 終了時刻が空のとき、開演（なければ開始）から何時間後を終わりにするか
+function calParts(ev) {
+  const hm = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  const open = hm(ev.openTime), start = hm(ev.startTime), end = hm(ev.endTime);
+  const first = open != null ? open : start;           // カレンダーの開始は、開場（なければ開演）
+  const [y, mo, d] = String(ev.date).split("-").map(Number);
+  if (first == null) return { allDay: true, y, mo, d };
+  let last = end != null ? end : (start != null ? start : first) + CAL_DEFAULT_HOURS * 60;
+  if (last <= first) last += 24 * 60;                  // 日付をまたぐとき
+  return { allDay: false, y, mo, d, first, last };
+}
+const p2 = (n) => String(n).padStart(2, "0");
+function calText(ev, reservation) {
+  const lines = [];
+  if (ev.openTime || ev.startTime) lines.push([ev.openTime ? "OPEN " + ev.openTime : "", ev.startTime ? "START " + ev.startTime : ""].filter(Boolean).join(" / "));
+  else if (ev.time) lines.push(ev.time);
+  if (ev.price) lines.push("料金：" + ev.price);
+  lines.push("取り置き予約：" + reservation.name + " 様 " + reservation.qty + "枚（予約番号 " + reservation.id + "）");
+  lines.push("お支払いは当日、会場の受付で。");
+  const url = location.origin + location.pathname;
+  if (/^https?:/.test(url)) lines.push("予約の確認・変更：" + url);
+  return lines.join("\n");
+}
+function calTitle(ev) { return ev.title + "（ALIEN BACK HEAD）"; }
+function fmtLocal(y, mo, d, minutes) {                 // 20261129T163000（時刻だけの表記。ctz=Asia/Tokyo と一緒に使う）
+  const t = new Date(Date.UTC(y, mo - 1, d, 0, minutes));
+  return t.getUTCFullYear() + p2(t.getUTCMonth() + 1) + p2(t.getUTCDate()) + "T" + p2(t.getUTCHours()) + p2(t.getUTCMinutes()) + "00";
+}
+function fmtDate(y, mo, d, addDays) {
+  const t = new Date(Date.UTC(y, mo - 1, d + (addDays || 0)));
+  return t.getUTCFullYear() + p2(t.getUTCMonth() + 1) + p2(t.getUTCDate());
+}
+function googleCalUrl(ev, reservation) {
+  const c = calParts(ev);
+  const dates = c.allDay
+    ? fmtDate(c.y, c.mo, c.d) + "/" + fmtDate(c.y, c.mo, c.d, 1)
+    : fmtLocal(c.y, c.mo, c.d, c.first) + "/" + fmtLocal(c.y, c.mo, c.d, c.last);
+  const q = new URLSearchParams({ action: "TEMPLATE", text: calTitle(ev), dates, details: calText(ev, reservation), location: ev.venue || "", ctz: "Asia/Tokyo" });
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+function icsEscape(s) { return String(s).replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\;"); }
+function icsFold(line) {                                // 75バイトごとに折り返す（日本語の途中で切らない）
+  const enc = new TextEncoder();
+  let out = "", cur = "", bytes = 0, limit = 75;
+  for (const ch of line) {
+    const b = enc.encode(ch).length;
+    if (bytes + b > limit) { out += cur + "\r\n "; cur = ""; bytes = 1; limit = 75; }
+    cur += ch; bytes += b;
+  }
+  return out + cur;
+}
+function buildIcs(ev, reservation) {
+  const c = calParts(ev);
+  const utc = (y, mo, d, minutes) => {                  // JST → UTC（日本は夏時間なし。-9時間）
+    const t = new Date(Date.UTC(y, mo - 1, d, 0, minutes - 9 * 60));
+    return t.getUTCFullYear() + p2(t.getUTCMonth() + 1) + p2(t.getUTCDate()) + "T" + p2(t.getUTCHours()) + p2(t.getUTCMinutes()) + "00Z";
+  };
+  const now = new Date();
+  const stamp = now.getUTCFullYear() + p2(now.getUTCMonth() + 1) + p2(now.getUTCDate()) + "T" + p2(now.getUTCHours()) + p2(now.getUTCMinutes()) + p2(now.getUTCSeconds()) + "Z";
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ALIEN BACK HEAD//abh-reservation//JA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    "UID:" + reservation.id + "-" + ev.date + "@abh-reservation",
+    "DTSTAMP:" + stamp,
+    c.allDay ? "DTSTART;VALUE=DATE:" + fmtDate(c.y, c.mo, c.d) : "DTSTART:" + utc(c.y, c.mo, c.d, c.first),
+    c.allDay ? "DTEND;VALUE=DATE:" + fmtDate(c.y, c.mo, c.d, 1) : "DTEND:" + utc(c.y, c.mo, c.d, c.last),
+    "SUMMARY:" + icsEscape(calTitle(ev)),
+    "DESCRIPTION:" + icsEscape(calText(ev, reservation)),
+    "LOCATION:" + icsEscape(ev.venue || ""),
+    "END:VEVENT", "END:VCALENDAR"
+  ];
+  return lines.map(icsFold).join("\r\n") + "\r\n";
+}
+function downloadIcs(ev, reservation) {
+  const blob = new Blob([buildIcs(ev, reservation)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "abh-live-" + ev.date + ".ics";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function setupCalendar(d) {
+  const box = $("#calBox");
+  // 新しい Code.gs が返す openTime がないときは、出さない（古い Code.gs のままでも動くように）
+  if (!d.event || !("openTime" in d.event) || d.id === "---") { box.hidden = true; return; }
+  const ev = d.event, r = { id: d.id, name: d.name, qty: d.qty };
+  $("#calGoogle").href = googleCalUrl(ev, r);
+  $("#calIcs").onclick = () => downloadIcs(ev, r);
+  const timed = !!(ev.openTime || ev.startTime);
+  $("#calNote").textContent = timed ? "" : "時刻が登録されていないため、終日の予定として入ります。";
+  box.hidden = false;
 }
 
 function resetForm() {
