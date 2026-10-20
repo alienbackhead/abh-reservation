@@ -130,6 +130,7 @@
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
   }
+  .lightbox img.lb-loading { width: calc(100vw - 32px); height: calc(100dvh - 32px); filter: blur(2px); }
   .lightbox .close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 1.3rem; line-height: 1;
     color: var(--bone); background: rgba(0,0,0,.6); border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer; }
 
@@ -534,7 +535,8 @@ function buildTicket(ev, selected, past) {
     add("料金", ev.price);
     if (!ev.closed) add("締切", ev.deadline);
   }
-  const imgUrl = /^https:\/\//i.test(ev.image || "") ? ev.image : "";
+  // 画像は、https のURL、または、サーバーが小さくして渡すデータ（data:image/…）
+  const imgUrl = /^(https:\/\/|data:image\/(?:jpeg|png|webp|gif);base64,)/i.test(ev.image || "") ? ev.image : "";
   const info = el("div", { class: "info" },
     el("h3", { text: ev.title }),
     dl,
@@ -555,9 +557,9 @@ function buildTicket(ev, selected, past) {
   let thumb = null;
   if (imgUrl) {
     // サムネイルは、小さいサイズ（=s480）で読み込む。読み込めなければ、元の大きさで試す
-    const small = imgUrl.replace(/=s\d+(?=\?|$)/, "=s480");
+    const small = imgUrl.startsWith("data:") ? imgUrl : imgUrl.replace(/=s\d+(?=\?|$)/, "=s480");
     const img = el("img", { src: small, alt: ev.title + " のフライヤー", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
-    thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openLightbox(imgUrl) }, img);
+    thumb = el("button", { class: "thumb", type: "button", "aria-label": "フライヤーを拡大する", onclick: () => openFlyer(ev, imgUrl) }, img);
     img.addEventListener("error", () => {
       if (small !== imgUrl && img.dataset.retry !== "1") { img.dataset.retry = "1"; img.src = imgUrl; return; }
       thumb.remove();                      // それでも読み込めないときは、画像の枠ごと消す
@@ -613,7 +615,26 @@ function openLightbox(url) {
 function closeLightbox() {
   const box = $("#lightbox");
   box.hidden = true;
-  box.querySelector("img").removeAttribute("src");
+  const img = box.querySelector("img");
+  img.classList.remove("lb-loading");
+  img.removeAttribute("src");
+}
+// フライヤーを拡大する。サーバーが小さくして渡した画像のときは、まず、そのサムネイルを出し、大きい画像が届いたら差し替える
+let flyerToken = 0;
+async function openFlyer(ev, url) {
+  const my = ++flyerToken;
+  const img = $("#lightbox img");
+  if (ev.hasFull) img.classList.add("lb-loading"); else img.classList.remove("lb-loading");
+  openLightbox(url);
+  if (!ev.hasFull) return;
+  try {
+    const res = await fetch(CONFIG.API_URL + "?action=image&id=" + encodeURIComponent(ev.id), { cache: "no-store" });
+    const data = await res.json();
+    if (my === flyerToken && !$("#lightbox").hidden && data.ok && /^data:image\/(?:jpeg|png|webp|gif);base64,/i.test(data.data || "")) {
+      img.onload = () => { img.classList.remove("lb-loading"); img.onload = null; };
+      img.src = data.data;
+    }
+  } catch (_) { /* 大きい画像が読めなくても、サムネイルは出したまま */ }
 }
 
 function fillSelect() {
@@ -1111,7 +1132,7 @@ $("#lightbox").addEventListener("click", closeLightbox);
 // 前日メールのリンク（…/?manage=ABH-XXXX）から来たときは、予約の確認画面を、予約番号を入れた状態で開く（メールアドレスは、本人が入力）
 try {
   const mid = new URLSearchParams(location.search).get("manage");
-  if (mid && /^ABH-[A-Za-z0-9]{4}$/.test(mid.trim())) {
+  if (mid && /^ABH-[A-Za-z0-9]{4}$/i.test(mid.trim())) {
     openManage(mid.trim().toUpperCase());
     $("#mEmail").focus({ preventScroll: true });
   }
